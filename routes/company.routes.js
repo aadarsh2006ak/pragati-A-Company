@@ -10,7 +10,9 @@ const {
   updateInterview,
   listInterviews,
   getInterview,
-  deleteInterview
+  deleteInterview,
+  getCompanySettings,
+  updateCompanySettings
 } = require('../controllers/company.controller');
 const { protect, authorize } = require('../middleware/auth.middleware');
 
@@ -19,6 +21,10 @@ router.put('/:id/approve', protect, authorize('admin'), approveCompany);
 router.post('/drive', protect, authorize('company'), createRecruitmentDrive);
 router.get('/drives', protect, listDrives);
 router.post('/drives/:id/apply', protect, authorize('student'), applyToDrive);
+
+// Settings routes
+router.get('/settings', protect, authorize('company'), getCompanySettings);
+router.put('/settings', protect, authorize('company'), updateCompanySettings);
 
 // Interview management routes
 router.post('/interview', protect, authorize('company', 'admin'), scheduleInterview);

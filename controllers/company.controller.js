@@ -500,3 +500,49 @@ exports.deleteInterview = async (req, res) => {
   }
 };
 
+// @desc    Get company settings
+// @route   GET /api/v1/company/settings
+// @access  Private (Company Admin only)
+exports.getCompanySettings = async (req, res) => {
+  try {
+    const companyProfile = await CompanyProfile.findOne({
+      where: { userId: req.user.id }
+    });
+
+    if (!companyProfile) {
+      return res.status(404).json({ success: false, error: 'Company profile not found' });
+    }
+
+    res.status(200).json(companyProfile);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// @desc    Update company settings
+// @route   PUT /api/v1/company/settings
+// @access  Private (Company Admin only)
+exports.updateCompanySettings = async (req, res) => {
+  try {
+    const companyProfile = await CompanyProfile.findOne({
+      where: { userId: req.user.id }
+    });
+
+    if (!companyProfile) {
+      return res.status(404).json({ success: false, error: 'Company profile not found' });
+    }
+
+    const { companyName, description, website } = req.body;
+
+    if (companyName !== undefined) companyProfile.companyName = companyName;
+    if (description !== undefined) companyProfile.description = description;
+    if (website !== undefined) companyProfile.website = website;
+
+    await companyProfile.save();
+
+    res.status(200).json(companyProfile);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
