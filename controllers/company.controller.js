@@ -3,6 +3,10 @@ const StudentProfile = require('../models/StudentProfile');
 const Interview = require('../models/Interview');
 const User = require('../models/User');
 const Joi = require('joi');
+const companyCandidateService = require('../services/companyCandidate.service');
+const companyOfferService = require('../services/companyOffer.service');
+const companyDashboardService = require('../services/companyDashboard.service');
+
 
 // @desc    List all corporate admin profiles
 // @route   GET /api/v1/admin/company
@@ -545,4 +549,183 @@ exports.updateCompanySettings = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+// ─── Company Candidates Controllers ──────────────────────────────────────────
+
+exports.getCompanyCandidates = async (req, res) => {
+  try {
+    const candidates = await companyCandidateService.getCandidatesByCompany(req.user.id);
+    let filtered = candidates;
+    if (req.query.search) {
+      const searchLower = req.query.search.toLowerCase();
+      filtered = candidates.filter(c => 
+        c.name.toLowerCase().includes(searchLower) || 
+        c.email.toLowerCase().includes(searchLower) ||
+        c.college.toLowerCase().includes(searchLower) ||
+        c.role.toLowerCase().includes(searchLower)
+      );
+    }
+    if (req.query.status) {
+      filtered = filtered.filter(c => String(c.status).toLowerCase() === String(req.query.status).toLowerCase());
+    }
+    if (req.query.college) {
+      filtered = filtered.filter(c => String(c.college).toLowerCase() === String(req.query.college).toLowerCase());
+    }
+    if (req.query.role) {
+      filtered = filtered.filter(c => String(c.role).toLowerCase() === String(req.query.role).toLowerCase());
+    }
+    res.status(200).json({ success: true, data: filtered });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.getCompanyCandidateById = async (req, res) => {
+  try {
+    const candidates = await companyCandidateService.getCandidatesByCompany(req.user.id);
+    const candidate = candidates.find(c => String(c.id) === String(req.params.id));
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+    res.status(200).json({ success: true, data: candidate });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.shortlistCandidate = async (req, res) => {
+  try {
+    await companyCandidateService.updateCandidateStatus(req.user.id, req.params.id, 'Shortlisted');
+    res.status(200).json({ success: true, message: 'Candidate shortlisted successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.rejectCandidate = async (req, res) => {
+  try {
+    await companyCandidateService.updateCandidateStatus(req.user.id, req.params.id, 'Rejected');
+    res.status(200).json({ success: true, message: 'Candidate rejected successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.moveCandidateStage = async (req, res) => {
+  try {
+    const { stage, notes } = req.body;
+    await companyCandidateService.moveCandidateStage(req.user.id, req.params.id, { stage, notes });
+    res.status(200).json({ success: true, message: 'Candidate stage updated successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.bulkShortlistCandidates = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    await companyCandidateService.bulkMoveCandidatesStage(req.user.id, ids, 'Shortlisted');
+    res.status(200).json({ success: true, message: 'Candidates shortlisted successfully in bulk' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.bulkRejectCandidates = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    await companyCandidateService.bulkMoveCandidatesStage(req.user.id, ids, 'Rejected');
+    res.status(200).json({ success: true, message: 'Candidates rejected successfully in bulk' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.bulkMoveCandidatesStage = async (req, res) => {
+  try {
+    const { ids, stage } = req.body;
+    await companyCandidateService.bulkMoveCandidatesStage(req.user.id, ids, stage);
+    res.status(200).json({ success: true, message: 'Candidates stage updated successfully in bulk' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── Company Offers Controllers ──────────────────────────────────────────────
+
+exports.getCompanyOffers = async (req, res) => {
+  try {
+    const offers = await companyOfferService.getOffersByCompany(req.user.id);
+    res.status(200).json({ success: true, data: offers });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.createCompanyOffer = async (req, res) => {
+  try {
+    const offer = await companyOfferService.createOffer(req.user.id, req.body);
+    res.status(200).json({ success: true, data: offer });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.updateCompanyOfferStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const offer = await companyOfferService.updateOfferStatus(req.user.id, req.params.id, status);
+    res.status(200).json({ success: true, data: offer });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.deleteCompanyOffer = async (req, res) => {
+  try {
+    await companyOfferService.deleteOffer(req.user.id, req.params.id);
+    res.status(200).json({ success: true, message: 'Offer deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── Company Dashboard Controllers ───────────────────────────────────────────
+
+exports.getCompanyDashboardStats = async (req, res) => {
+  try {
+    const stats = await companyDashboardService.getDashboardStats(req.user.id);
+    res.status(200).json({ success: true, data: stats });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.getCompanyDashboardFunnel = async (req, res) => {
+  try {
+    const funnel = await companyDashboardService.getDashboardFunnel(req.user.id);
+    res.status(200).json({ success: true, data: funnel });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.getCompanyDashboardCollegeStats = async (req, res) => {
+  try {
+    const collegeStats = await companyDashboardService.getDashboardCollegeStats(req.user.id);
+    res.status(200).json({ success: true, data: collegeStats });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.getCompanyDashboardActivity = async (req, res) => {
+  try {
+    const activity = await companyDashboardService.getDashboardActivity(req.user.id);
+    res.status(200).json({ success: true, data: activity });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 
